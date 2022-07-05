@@ -129,8 +129,9 @@ class ConnectionTest extends TestCase
 
     /**
      * @dataProvider provideAuthDsn
+     * @param string|mixed[] $expected
      */
-    public function testAuth(string|array $expected, string $dsn)
+    public function testAuth($expected, string $dsn)
     {
         $redis = $this->createMock(\Redis::class);
 
@@ -369,7 +370,7 @@ class ConnectionTest extends TestCase
      */
     public function testAddReturnId(string $expected, \Redis $redis, int $delay = 0)
     {
-        $id = Connection::fromDsn(dsn: 'redis://localhost/queue', redis: $redis)->add('body', [], $delay);
+        $id = Connection::fromDsn('redis://localhost/queue', [], $redis)->add('body', [], $delay);
 
         $this->assertMatchesRegularExpression($expected, $id);
     }
@@ -401,7 +402,8 @@ class ConnectionTest extends TestCase
         $master = getenv('MESSENGER_REDIS_DSN');
         $uid = uniqid('sentinel_');
 
-        $exp = explode('://', $master, 2)[1];
+        $parsed = parse_url($master);
+        $exp = $parsed['host'] . ':' . $parsed['port'];
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage(sprintf('Failed to retrieve master information from master name "%s" and address "%s".', $uid, $exp));
 

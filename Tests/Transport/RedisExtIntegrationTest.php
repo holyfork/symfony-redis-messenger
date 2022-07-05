@@ -238,11 +238,10 @@ class RedisExtIntegrationTest extends TestCase
     {
         $this->skipIfRedisClusterUnavailable();
 
-        $connection = new Connection(
-            ['lazy' => true],
-            ['host' => explode(' ', getenv('REDIS_CLUSTER_HOSTS'))],
-            []
-        );
+        $connection = new Connection([
+            'lazy' => true,
+            'host' => explode(' ', getenv('REDIS_CLUSTER_HOSTS'))
+        ]);
 
         $connection->add('1', []);
         $this->assertNotEmpty($message = $connection->get());
@@ -293,7 +292,7 @@ class RedisExtIntegrationTest extends TestCase
         }, $hosts);
         $dsn = implode(',', $dsn);
 
-        $this->assertInstanceOf(Connection::class, Connection::fromDsn($dsn, ['sentinel_master' => getenv('MESSENGER_REDIS_SENTINEL_MASTER')]));
+        $this->assertInstanceOf(Connection::class, Connection::fromDsn($dsn));
     }
 
     public function testJsonError()
@@ -342,6 +341,7 @@ class RedisExtIntegrationTest extends TestCase
     private function getConnectionGroup(Connection $connection): string
     {
         $property = (new \ReflectionClass(Connection::class))->getProperty('group');
+        $property->setAccessible(true);
 
         return $property->getValue($connection);
     }
@@ -349,6 +349,7 @@ class RedisExtIntegrationTest extends TestCase
     private function getConnectionStream(Connection $connection): string
     {
         $property = (new \ReflectionClass(Connection::class))->getProperty('stream');
+        $property->setAccessible(true);
 
         return $property->getValue($connection);
     }

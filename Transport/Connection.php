@@ -51,7 +51,10 @@ class Connection
         'ssl' => null, // see https://php.net/context.ssl
     ];
 
-    private \Redis|\RedisCluster|RedisProxy|RedisClusterProxy $connection;
+    /**
+     * @var \Redis|\RedisCluster|\Symfony\Component\Messenger\Bridge\Redis\Transport\RedisProxy|\Symfony\Component\Messenger\Bridge\Redis\Transport\RedisClusterProxy
+     */
+    private $connection;
     private string $stream;
     private string $queue;
     private string $group;
@@ -65,7 +68,10 @@ class Connection
     private bool $deleteAfterReject;
     private bool $couldHavePendingMessages = true;
 
-    public function __construct(array $options, \Redis|\RedisCluster $redis = null)
+    /**
+     * @param \Redis|\RedisCluster $redis
+     */
+    public function __construct(array $options, $redis = null)
     {
         if (version_compare(phpversion('redis'), '4.3.0', '<')) {
             throw new LogicException('The redis transport requires php-redis 4.3.0 or higher.');
@@ -132,7 +138,7 @@ class Connection
     /**
      * @param string|string[]|null $auth
      */
-    private static function initializeRedis(\Redis $redis, string $host, int $port, string|array|null $auth, array $params): \Redis
+    private static function initializeRedis(\Redis $redis, string $host, int $port, $auth, array $params): \Redis
     {
         $connect = isset($params['persistent_id']) ? 'pconnect' : 'connect';
         $redis->{$connect}($host, $port, $params['timeout'], $params['persistent_id'], $params['retry_interval'], $params['read_timeout'], ...\defined('Redis::SCAN_PREFIX') ? [['stream' => $params['ssl'] ?? null]] : []);
@@ -153,17 +159,20 @@ class Connection
     /**
      * @param string|string[]|null $auth
      */
-    private static function initializeRedisCluster(?\RedisCluster $redis, array $hosts, string|array|null $auth, array $params): \RedisCluster
+    private static function initializeRedisCluster(?\RedisCluster $redis, array $hosts, $auth, array $params): \RedisCluster
     {
-        $redis ??= new \RedisCluster(null, $hosts, $params['timeout'], $params['read_timeout'], (bool) $params['persistent'], $auth, ...\defined('Redis::SCAN_PREFIX') ? [$params['ssl'] ?? null] : []);
+        $redis ??= new \RedisCluster(null, $hosts, $params['timeout'], $params['read_timeout'], (bool) ($params['persistent'] ?? null), $auth, ...\defined('Redis::SCAN_PREFIX') ? [$params['ssl'] ?? null] : []);
         $redis->setOption(\Redis::OPT_SERIALIZER, $params['serializer']);
 
         return $redis;
     }
 
-    public static function fromDsn(string $dsn, array $options = [], \Redis|\RedisCluster $redis = null): self
+    /**
+     * @param \Redis|\RedisCluster $redis
+     */
+    public static function fromDsn(string $dsn, array $options = [], $redis = null): self
     {
-        if (!str_contains($dsn, ',')) {
+        if (strpos($dsn, ',') === false) {
             $parsedUrl = self::parseDsn($dsn, $options);
 
             if (isset($parsedUrl['host']) && 'rediss' === $parsedUrl['scheme']) {
@@ -196,12 +205,20 @@ class Connection
             throw new LogicException(sprintf('Invalid option(s) "%s" passed to the Redis Messenger transport.', implode('", "', $invalidOptions)));
         }
         foreach (self::DEFAULT_OPTIONS as $k => $v) {
-            $options[$k] = match (\gettype($v)) {
-                'integer' => filter_var($options[$k] ?? $v, \FILTER_VALIDATE_INT),
-                'boolean' => filter_var($options[$k] ?? $v, \FILTER_VALIDATE_BOOLEAN),
-                'double' => filter_var($options[$k] ?? $v, \FILTER_VALIDATE_FLOAT),
-                default => $options[$k] ?? $v,
-            };
+            switch (\gettype($v)) {
+                case 'integer':
+                    $options[$k] = filter_var($options[$k] ?? $v, \FILTER_VALIDATE_INT);
+                    break;
+                case 'boolean':
+                    $options[$k] = filter_var($options[$k] ?? $v, \FILTER_VALIDATE_BOOLEAN);
+                    break;
+                case 'double':
+                    $options[$k] = filter_var($options[$k] ?? $v, \FILTER_VALIDATE_FLOAT);
+                    break;
+                default:
+                    $options[$k] = $options[$k] ?? $v;
+                    break;
+            }
         }
 
         if (isset($parsedUrl['host'])) {
@@ -227,7 +244,7 @@ class Connection
     private static function parseDsn(string $dsn, array &$options): array
     {
         $url = $dsn;
-        $scheme = str_starts_with($dsn, 'rediss:') ? 'rediss' : 'redis';
+        $scheme = strncmp($dsn, 'rediss:', strlen('rediss:')) === 0 ? 'rediss' : 'redis';
 
         if (preg_match('#^'.$scheme.':///([^:@])+$#', $dsn)) {
             $url = str_replace($scheme.':', 'file:', $dsn);
@@ -511,7 +528,7 @@ class Connection
         if ($unlink) {
             try {
                 $unlink = false !== $this->connection->unlink($this->stream, $this->queue);
-            } catch (\Throwable) {
+            } catch (\Throwable $exception) {
                 $unlink = false;
             }
         }
@@ -521,7 +538,10 @@ class Connection
         }
     }
 
-    private function rawCommand(string $command, ...$arguments): mixed
+    /**
+     * @return mixed
+     */
+    private function rawCommand(string $command, ...$arguments)
     {
         try {
             if ($this->connection instanceof \RedisCluster || $this->connection instanceof RedisClusterProxy) {

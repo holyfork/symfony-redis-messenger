@@ -30,6 +30,6 @@ class RedisTransportFactory implements TransportFactoryInterface
 
     public function supports(string $dsn, array $options): bool
     {
-        return str_starts_with($dsn, 'redis://') || str_starts_with($dsn, 'rediss://');
+        return strncmp($dsn, 'redis://', strlen('redis://')) === 0 || strncmp($dsn, 'rediss://', strlen('rediss://')) === 0;
     }
 }
