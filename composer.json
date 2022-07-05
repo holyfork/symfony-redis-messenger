@@ -15,20 +15,27 @@
             "homepage": "https://symfony.com/contributors"
         }
     ],
+    "repositories": {
+        "symfony-messenger": {
+            "type": "vcs",
+            "url": "https://github.com/holyfork/symfony-messenger"
+        }
+    },
     "require": {
-        "php": ">=8.1",
+        "php": ">=8.0 <8.1",
         "ext-redis": "*",
-        "symfony/messenger": "^6.1"
+        "symfony/messenger": "dev-rector"
     },
     "require-dev": {
         "symfony/property-access": "^5.4|^6.0",
-        "symfony/serializer": "^5.4|^6.0"
+        "symfony/serializer": "^5.4|^6.0",
+        "phpunit/phpunit": "^9.5.21"
     },
     "autoload": {
-        "psr-4": { "Symfony\\Component\\Messenger\\Bridge\\Redis\\": "" },
-        "exclude-from-classmap": [
-            "/Tests/"
-        ]
+        "psr-4": { "Symfony\\Component\\Messenger\\Bridge\\Redis\\": "" }
+    },
+    "autoload-dev": {
+        "classmap": ["Tests/"]
     },
     "minimum-stability": "dev"
 }

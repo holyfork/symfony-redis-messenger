@@ -9,7 +9,11 @@
          failOnWarning="true"
 >
     <php>
-        <ini name="error_reporting" value="-1" />
+        <ini name="error_reporting" value="-1"/>
+        <env name="REDIS_HOST" value="0.0.0.0:6379"/>
+        <env name="REDIS_CLUSTER_HOSTS" value="0.0.0.0:7000 0.0.0.0:7001 0.0.0.0:7002 0.0.0.0:7003 0.0.0.0:7004 0.0.0.0:7005"/>
+        <env name="MESSENGER_REDIS_DSN" value="redis://0.0.0.0:26379/messages"/>
+        <env name="MESSENGER_REDIS_SENTINEL_MASTER" value="mymaster"/>
     </php>
 
     <testsuites>

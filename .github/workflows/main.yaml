@@ -1,0 +1,68 @@
+name: "build"
+
+on:
+  push:
+    branches:
+      - "*"
+
+jobs:
+  tests:
+    name: "Tests"
+    runs-on: ${{ matrix.operating-system }}
+
+    strategy:
+      matrix:
+        operating-system: [ 'ubuntu-latest' ]
+        php-versions: [ '8.0' ]
+      fail-fast: false
+
+    services:
+      redis:
+        image: redis:6.0.0
+        ports:
+          - 6379:6379
+      redis-cluster:
+        image: grokzen/redis-cluster:5.0.4
+        ports:
+          - 7000:7000
+          - 7001:7001
+          - 7002:7002
+          - 7003:7003
+          - 7004:7004
+          - 7005:7005
+          - 7006:7006
+        env:
+          STANDALONE: 1
+      redis-sentinel:
+        image: bitnami/redis-sentinel:6.0
+        ports:
+          - 26379:26379
+        env:
+          REDIS_MASTER_HOST: redis
+          REDIS_MASTER_SET: mymaster
+          REDIS_SENTINEL_QUORUM: 1
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-versions }}
+          extensions: "redis-5.3.4"
+        env:
+          COMPOSER_TOKEN: ${{ secrets.USER_TOKEN }}
+
+      - name: Composer
+        run: "composer install"
+
+      - name: Test
+        env:
+          REDIS_HOST: '0.0.0.0:6379'
+          REDIS_CLUSTER_HOSTS: '0.0.0.0:7000 0.0.0.0:7001 0.0.0.0:7002 0.0.0.0:7003 0.0.0.0:7004 0.0.0.0:7005'
+          MESSENGER_REDIS_DSN: 'redis://0.0.0.0:26379/messages'
+          MESSENGER_REDIS_SENTINEL_MASTER: mymaster
+        run: "vendor/bin/phpunit -v"
+        
