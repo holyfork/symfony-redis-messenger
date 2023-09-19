@@ -99,7 +99,26 @@ class Connection
             $redis = $options['lazy'] ? new RedisClusterProxy($redis, $initializer) : $initializer($redis);
         } else {
             if (null !== $sentinelMaster) {
-                $sentinelClient = new \RedisSentinel($host, $port, $options['timeout'], $options['persistent_id'], $options['retry_interval'], $options['read_timeout']);
+                $version = explode('.', phpversion("redis"));
+
+                if ($version[0] > 5) {
+                    $connectOptions = [
+                        'host' => $host,
+                        'port' => $port,
+                        'connectTimeout' => $options['timeout'],
+                        'persistent' => $options['persistent_id'],
+                        'retryInterval' => $options['retry_interval'],
+                        'readTimeout' => $options['read_timeout'],
+                    ];
+
+                    if ($auth !== null) {
+                        $connectOptions['auth'] = $auth;
+                    }
+
+                    $sentinelClient = new \RedisSentinel($connectOptions);
+                } else {
+                    $sentinelClient = new \RedisSentinel($host, $port, $options['timeout'], $options['persistent_id'], $options['retry_interval'], $options['read_timeout']);
+                }
 
                 if (!$address = $sentinelClient->getMasterAddrByName($sentinelMaster)) {
                     throw new InvalidArgumentException(sprintf('Failed to retrieve master information from master name "%s" and address "%s:%d".', $sentinelMaster, $host, $port));
