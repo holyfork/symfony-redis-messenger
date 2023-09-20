@@ -111,10 +111,6 @@ class Connection
                         'readTimeout' => $options['read_timeout'],
                     ];
 
-                    if ($auth !== null) {
-                        $connectOptions['auth'] = $auth;
-                    }
-
                     $sentinelClient = new \RedisSentinel($connectOptions);
                 } else {
                     $sentinelClient = new \RedisSentinel($host, $port, $options['timeout'], $options['persistent_id'], $options['retry_interval'], $options['read_timeout']);
